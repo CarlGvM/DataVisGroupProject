@@ -48,17 +48,29 @@ if stock_data is None:
     st.stop()
 
 # ---------- CHART ----------
+
+# ---------- CHART ----------
 st.subheader("📈 Stock Price Over Time")
 
-# Reset index for Plotly
-plot_df = stock_data.reset_index()
+# Reset index and rename columns to ensure consistency
+plot_df = stock_data.copy()
+plot_df = plot_df.reset_index()
 
-# Safety check
+# Ensure 'Date' column exists
+if "Date" not in plot_df.columns:
+    plot_df.rename(columns={plot_df.columns[0]: "Date"}, inplace=True)
+
+# Ensure 'Close' column exists
 if "Close" not in plot_df.columns:
-    st.error("The 'Close' column is missing from the data.")
-    st.stop()
+    # Try to find a column that contains 'Close'
+    close_candidates = [col for col in plot_df.columns if "close" in col.lower()]
+    if close_candidates:
+        plot_df["Close"] = plot_df[close_candidates[0]]
+    else:
+        st.error("Could not find a 'Close' price column in the data.")
+        st.stop()
 
-# Plot line chart
+# Plot the line chart
 fig = px.line(
     plot_df,
     x="Date",
@@ -67,6 +79,7 @@ fig = px.line(
     labels={"Close": "Price (USD)", "Date": "Date"},
     template="plotly_white",
 )
+
 fig.update_layout(
     xaxis_title="Date",
     yaxis_title="Price (USD)",
@@ -75,7 +88,6 @@ fig.update_layout(
 )
 fig.update_xaxes(rangeslider_visible=True)
 st.plotly_chart(fig, use_container_width=True)
-
 # ---------- METRIC CARDS ----------
 st.subheader("📌 Key Performance Metrics")
 
