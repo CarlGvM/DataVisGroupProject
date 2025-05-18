@@ -50,27 +50,41 @@ if stock_data is None:
 # ---------- CHART ----------
 
 # ---------- CHART ----------
+# ---------- CHART ----------
 st.subheader("📈 Stock Price Over Time")
 
-# Reset index and rename columns to ensure consistency
-plot_df = stock_data.copy()
-plot_df = plot_df.reset_index()
+# Defensive copy
+plot_df = stock_data.copy().reset_index()
 
-# Ensure 'Date' column exists
+# Diagnostic output (remove before final submission)
+st.write("DataFrame preview:", plot_df.head())
+st.write("DataFrame columns:", plot_df.columns.tolist())
+
+# Ensure 'Date' and 'Close' exist
 if "Date" not in plot_df.columns:
-    plot_df.rename(columns={plot_df.columns[0]: "Date"}, inplace=True)
+    # If the first column looks like a date, rename it
+    possible_date = plot_df.columns[0]
+    if pd.api.types.is_datetime64_any_dtype(plot_df[possible_date]):
+        plot_df.rename(columns={possible_date: "Date"}, inplace=True)
+    else:
+        st.error("No 'Date' column found or inferred.")
+        st.stop()
 
-# Ensure 'Close' column exists
 if "Close" not in plot_df.columns:
-    # Try to find a column that contains 'Close'
+    # Try to infer from possible multi-named columns
     close_candidates = [col for col in plot_df.columns if "close" in col.lower()]
     if close_candidates:
         plot_df["Close"] = plot_df[close_candidates[0]]
     else:
-        st.error("Could not find a 'Close' price column in the data.")
+        st.error("No 'Close' column found in the data.")
         st.stop()
 
-# Plot the line chart
+# Final safety check
+if plot_df["Close"].isnull().all():
+    st.error("Close column contains only null values.")
+    st.stop()
+
+# Plot the chart
 fig = px.line(
     plot_df,
     x="Date",
