@@ -24,7 +24,7 @@ if start_date > end_date or start_date > date.today() or end_date > date.today()
     st.stop()
 
 # ---------- FETCH & PROCESS DATA ----------
-@st.cache_data(ttl=3600)
+
 @st.cache_data(ttl=3600)
 def get_stock_data(ticker, start, end):
     try:
@@ -33,10 +33,20 @@ def get_stock_data(ticker, start, end):
         if df.empty:
             return None
 
-        # Flatten MultiIndex column names (e.g., ('Close', 'AAPL') → 'Close')
-        df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
+        # ✅ Flatten MultiIndex by joining both levels (e.g., ('Close', 'AAPL') → 'Close_AAPL')
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = ['_'.join([str(i) for i in col if i]) for col in df.columns]
 
-        # Add metrics
+        # ✅ Try to find the 'Close' column dynamically
+        close_candidates = [col for col in df.columns if "close" in col.lower()]
+        if not close_candidates:
+            st.error("No 'Close' column found in the data.")
+            return None
+
+        close_col = close_candidates[0]
+        df["Close"] = df[close_col]  # Standardize for later access
+
+        # ✅ Add calculated metrics
         df["Daily Return"] = df["Close"].pct_change()
         df["Cumulative Return"] = (1 + df["Daily Return"]).cumprod() - 1
         df["Max Drawdown"] = (df["Close"] / df["Close"].cummax()) - 1
