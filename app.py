@@ -25,17 +25,23 @@ if start_date > end_date or start_date > date.today() or end_date > date.today()
 
 # ---------- FETCH & PROCESS DATA ----------
 @st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600)
 def get_stock_data(ticker, start, end):
     try:
-        data = yf.download(ticker, start=start, end=end)
-        if data.empty:
+        df = yf.download(ticker, start=start, end=end, group_by="ticker")
+
+        if df.empty:
             return None
 
-        # Compute additional metrics
-        data["Daily Return"] = data["Close"].pct_change()
-        data["Cumulative Return"] = (1 + data["Daily Return"]).cumprod() - 1
-        data["Max Drawdown"] = (data["Close"] / data["Close"].cummax()) - 1
-        return data
+        # Flatten MultiIndex column names (e.g., ('Close', 'AAPL') → 'Close')
+        df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
+
+        # Add metrics
+        df["Daily Return"] = df["Close"].pct_change()
+        df["Cumulative Return"] = (1 + df["Daily Return"]).cumprod() - 1
+        df["Max Drawdown"] = (df["Close"] / df["Close"].cummax()) - 1
+
+        return df
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return None
