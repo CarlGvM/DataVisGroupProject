@@ -48,9 +48,6 @@ if stock_data is None:
     st.stop()
 
 # ---------- CHART ----------
-
-# ---------- CHART ----------
-# ---------- CHART ----------
 st.subheader("📈 Stock Price Over Time")
 
 # Defensive copy
@@ -80,7 +77,7 @@ if "Close" not in plot_df.columns:
         st.stop()
 
 # Final safety check
-if plot_df["Close"].isnull().all():
+if plot_df["Close"].dropna().empty:
     st.error("Close column contains only null values.")
     st.stop()
 
